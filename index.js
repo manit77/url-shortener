@@ -13,6 +13,9 @@ const CONFIG_FILE = path.join(__dirname, "config.json");
 const app = express();
 app.use(express.json());
 
+// 👉 Serve static files (index.html for /form)
+app.use("/form", express.static(path.join(__dirname, "public")));
+
 // Load config
 const config = JSON.parse(fs.readFileSync(CONFIG_FILE, "utf8"));
 const BASE_URL = config.url;
@@ -52,7 +55,6 @@ app.post("/shorten", (req, res) => {
             });
         }
 
-        // Register new shortened link
         db[id] = url;
         saveDb();
 

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>URL Shortener</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 40px;
+            max-width: 600px;
+            margin: auto;
+        }
+        input, button {
+            font-size: 1.1em;
+            padding: 10px;
+            width: 100%;
+            margin-top: 10px;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f3f3f3;
+            border-radius: 5px;
+            word-break: break-all;
+        }
+        .error {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>Create Short URL</h2>
+
+    <label>Original URL:</label>
+    <input id="url" placeholder="https://example.com">
+
+    <label>Custom ID (optional):</label>
+    <input id="customId" placeholder="my-link">
+
+    <button onclick="shorten()">Shorten</button>
+
+    <div id="result"></div>
+
+    <script>
+        async function shorten() {
+            const url = document.getElementById("url").value.trim();
+            const id = document.getElementById("customId").value.trim();
+            const resultDiv = document.getElementById("result");
+
+            resultDiv.innerHTML = "Processing...";
+
+            const response = await fetch("/shorten", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ url, id })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                resultDiv.innerHTML = `<span class="error">${data.error}</span>`;
+                return;
+            }
+
+            resultDiv.innerHTML = `
+                <strong>Short URL Created!</strong><br><br>
+                <b>Short:</b> <a href="${data.short}" target="_blank">${data.short}</a><br>
+                <b>Original:</b> ${data.original}<br>
+                <b>ID:</b> ${data.id}
+            `;
+        }
+    </script>
+
+</body>
+</html>
