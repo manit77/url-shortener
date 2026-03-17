@@ -5,32 +5,53 @@ import { fileURLToPath } from "url";
 import crypto from "crypto";
 
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __dirname = path.dirname(__filename); //current directory of the index.js file
+const configFilePath = path.join(__dirname, "config.json");
 
-const DB_FILE = path.join(__dirname, "db.json");
-const CONFIG_FILE = path.join(__dirname, "config.json");
+// Load config
+const config = JSON.parse(fs.readFileSync(configFilePath, "utf8"));
+const BASE_URL = config.url;
+const dbFilePath = path.join(config.data_dir ? config.data_dir : __dirname, "db.json");
 
 const app = express();
 app.use(express.json());
 
-// 👉 Serve static files (index.html for /form)
-app.use("/form", express.static(path.join(__dirname, "public")));
+// Simple username/password auth for /form
+function formAuth(req, res, next) {
+    const authHeader = req.headers.authorization || "";
 
-// Load config
-const config = JSON.parse(fs.readFileSync(CONFIG_FILE, "utf8"));
-const BASE_URL = config.url;
+    if (!authHeader.startsWith("Basic ")) {
+        res.setHeader("WWW-Authenticate", 'Basic realm="URL Shortener Form"');
+        return res.status(401).send("Authentication required");
+    }
+
+    const base64Credentials = authHeader.split(" ")[1] || "";
+    const credentials = Buffer.from(base64Credentials, "base64").toString("utf8");
+    const [user, pass] = credentials.split(":");
+
+    if (user === config.username && pass === config.password) {
+        return next();
+    }
+
+    res.setHeader("WWW-Authenticate", 'Basic realm="URL Shortener Form"');
+    return res.status(401).send("Invalid credentials");
+}
+
+// 👉 Serve static files (index.html for /form) with auth
+app.use("/form", formAuth, express.static(path.join(__dirname, "public")));
+
 
 // Load DB or initialize
 let db = {};
-if (fs.existsSync(DB_FILE)) {
-    db = JSON.parse(fs.readFileSync(DB_FILE, "utf8"));
+if (fs.existsSync(dbFilePath)) {
+    db = JSON.parse(fs.readFileSync(dbFilePath, "utf8"));
 } else {
-    fs.writeFileSync(DB_FILE, JSON.stringify({}, null, 2));
+    fs.writeFileSync(dbFilePath, JSON.stringify({}, null, 2));
 }
 
 // Save DB to disk
 function saveDb() {
-    fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
+    fs.writeFileSync(dbFilePath, JSON.stringify(db, null, 2));
 }
 
 // Generate random ID
